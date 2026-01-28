@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Private World 💖</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* All your beautiful CSS from before stays here */
+        body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradient(135deg, #ff758c, #ff7eb3); color: white; text-align: center; }
+        .card { background: rgba(255,255,255,0.15); backdrop-filter: blur(12px); border-radius: 20px; padding: 20px; max-width: 500px; margin: 20px auto; }
+        .timeline-item { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; margin: 10px 0; }
+        button { background: #ff4d6d; color: white; border: none; padding: 10px 20px; border-radius: 12px; cursor: pointer; font-weight: bold; }
+        .heart { position: fixed; bottom: -10px; animation: float 6s linear infinite; pointer-events: none; }
+        @keyframes float { to { transform: translateY(-100vh); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <h1>💖 Our Shared Love Story</h1>
+
+    <section class="card">
+        <h2>💌 Live Note</h2>
+        <textarea id="noteInput" placeholder="Type a live note..."></textarea>
+        <button id="sendBtn">Update for Both of Us ✨</button>
+        <p id="liveNote"><i>Waiting for a message...</i></p>
+    </section>
+
+    <section class="card">
+        <h2>📖 Our Timeline</h2>
+        <input type="text" id="memInput" placeholder="Add a new memory...">
+        <button id="memBtn">Add Memory 💞</button>
+        <div id="timelineList"></div>
+    </section>
+
+    <section class="card">
+      <h2>⚡ Live Reactions</h2>
+      <button class="react-btn">❤️</button>
+      <button class="react-btn">🔥</button>
+      <button class="react-btn">🥰</button>
+      <button class="react-btn">✨</button>
+    </section>
+
+    <script type="module">
+        // Import Firebase Functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, addDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // --- PASTE YOUR FIREBASE CONFIG HERE ---
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        // ---------------------------------------
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- 1. LIVE NOTE LOGIC ---
+        const noteInput = document.getElementById('noteInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const liveNote = document.getElementById('liveNote');
+
+        // Send to Cloud
+        sendBtn.onclick = async () => {
+            await setDoc(doc(db, "appData", "currentNote"), { text: noteInput.value });
+            noteInput.value = "";
+        };
+
+        // Listen for Cloud Changes
+        onSnapshot(doc(db, "appData", "currentNote"), (doc) => {
+            if (doc.exists()) liveNote.innerText = doc.data().text;
+        });
+
+        // --- 2. TIMELINE LOGIC ---
+        const memBtn = document.getElementById('memBtn');
+        const memInput = document.getElementById('memInput');
+        const timelineList = document.getElementById('timelineList');
+
+        memBtn.onclick = async () => {
+            if (!memInput.value) return;
+            await addDoc(collection(db, "timeline"), {
+                text: memInput.value,
+                createdAt: new Date()
+            });
+            memInput.value = "";
+        };
+
+        onSnapshot(query(collection(db, "timeline"), orderBy("createdAt", "desc")), (snapshot) => {
+            timelineList.innerHTML = "";
+            snapshot.forEach(doc => {
+                const p = document.createElement('p');
+                p.className = "timeline-item";
+                p.innerText = "💖 " + doc.data().text;
+                timelineList.appendChild(p);
+            });
+        });
+
+        // --- 3. REACTION LOGIC ---
+        const reactBtns = document.querySelectorAll('.react-btn');
+        reactBtns.forEach(btn => {
+            btn.onclick = async () => {
+                await setDoc(doc(db, "appData", "lastReaction"), { 
+                    emoji: btn.innerText, 
+                    time: Date.now() 
+                });
+            };
+        });
+
+        onSnapshot(doc(db, "appData", "lastReaction"), (doc) => {
+            if (doc.exists()) {
+                triggerBurst(doc.data().emoji);
+            }
+        });
+
+        function triggerBurst(emoji) {
+            for(let i=0; i<15; i++) {
+                const h = document.createElement('div');
+                h.className = 'heart';
+                h.innerText = emoji;
+                h.style.left = Math.random() * 100 + "vw";
+                h.style.fontSize = (Math.random() * 20 + 20) + "px";
+                h.style.animationDuration = (Math.random() * 2 + 3) + "s";
+                document.body.appendChild(h);
+                setTimeout(() => h.remove(), 5000);
+            }
+        }
+    </script>
+</body>
+</html>
